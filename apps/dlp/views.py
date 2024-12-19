@@ -6,7 +6,6 @@ from rest_framework import status
 
 from apps.dlp.constants import EVENT_CALLBACK, EVENT_TYPE_MESSAGE
 from apps.dlp.services import scan_message, create_detected_messages
-from apps.dlp.models import Pattern
 
 logger = logging.getLogger(__name__)
 
@@ -25,13 +24,6 @@ class SlackEventView(APIView, HttpResponseNotAllowed):
             message = event.get("text")
             if event.get("type") == EVENT_TYPE_MESSAGE:
                 logger.info(f"Message received: {message}")
-
-                # Scan the message for patterns
-                patterns = Pattern.objects.filter(
-                    regex__regex=r"|".join(
-                        [pattern.regex for pattern in Pattern.objects.all()]
-                    )
-                )
                 matches = scan_message(message=message)
 
                 if matches:
