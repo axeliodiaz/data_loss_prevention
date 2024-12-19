@@ -1,3 +1,6 @@
 from django.contrib import admin
 
-# Register your models here.
+from apps.dlp.models import Pattern, DetectedMessage
+
+admin.site.register(Pattern)
+admin.site.register(DetectedMessage)

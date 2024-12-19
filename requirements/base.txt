@@ -3,5 +3,6 @@ psycopg2-binary==2.9.10
 slack-sdk==3.34.0
 pytest==8.3.4
 pytest-django==4.9.0
+django-model-utils==5.0.0
 black[d]==24.10.0
 djangorestframework==3.15.2

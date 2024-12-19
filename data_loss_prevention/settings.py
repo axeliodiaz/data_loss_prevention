@@ -25,9 +25,7 @@ SECRET_KEY = "django-insecure-%qu8x3%kiituxfv6#10l(a)*f+5g07w5#&@83vxv4juc^qyt!#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [
-    "f21b-190-21-45-141.ngrok-free.app"
-]
+ALLOWED_HOSTS = ["f21b-190-21-45-141.ngrok-free.app", "localhost", "127.0.0.1"]
 
 
 # Application definition
@@ -41,9 +39,7 @@ DJANGO_APPS = [
     "django.contrib.staticfiles",
 ]
 
-PROJECT_APPS = [
-    "apps.dlp"
-]
+PROJECT_APPS = ["apps.dlp"]
 
 INSTALLED_APPS = DJANGO_APPS + PROJECT_APPS
 
@@ -81,13 +77,13 @@ WSGI_APPLICATION = "data_loss_prevention.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'dlp_project',
-        'USER': 'admin',
-        'PASSWORD': 'password',
-        'HOST': 'localhost',
-        'PORT': '5432',
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "dlp_project",
+        "USER": "admin",
+        "PASSWORD": "password",
+        "HOST": "localhost",
+        "PORT": "5432",
     }
 }
 
