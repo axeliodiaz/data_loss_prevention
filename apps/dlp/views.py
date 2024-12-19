@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
+from apps.dlp.constants import EVENT_CALLBACK, EVENT_TYPE_MESSAGE
 
 logger = logging.getLogger(__name__)
 
@@ -14,11 +15,9 @@ class SlackEventView(APIView, HttpResponseNotAllowed):
 
     def check_event_callback(self, data):
         type = data.pop("type", None)
-        if type and type == "event_callback":
+        if type and type == EVENT_CALLBACK:
             event = data.get("event", {})
-            message = "asdasd"
-            print(message)
-            if event.get("type") == "message":
+            if event.get("type") == EVENT_TYPE_MESSAGE:
                 logger.info(f"Message received: {event.get('text')}")
             else:
                 logger.debug(f"Unhandled event type: {event.get('type')}")

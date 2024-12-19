@@ -3,6 +3,8 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
 
+from apps.dlp.constants import EVENT_CALLBACK, EVENT_TYPE_MESSAGE
+
 
 @pytest.fixture
 def mock_logger_info(mocker):
@@ -37,8 +39,8 @@ class TestSlackEventView:
         """Test a valid Slack event callback with a message."""
         message = "Hello, world!"
         data = {
-            "type": "event_callback",
-            "event": {"type": "message", "text": message},
+            "type": EVENT_CALLBACK,
+            "event": {"type": EVENT_TYPE_MESSAGE, "text": message},
         }
         response = self.client.post(self.url, data, format="json")
 
@@ -52,7 +54,7 @@ class TestSlackEventView:
         """Test a valid Slack event callback with a non-message event."""
         event_type = "reaction_added"
         data = {
-            "type": "event_callback",
+            "type": EVENT_CALLBACK,
             "event": {"type": event_type, "reaction": "thumbsup"},
         }
         response = self.client.post(self.url, data, format="json")

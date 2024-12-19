@@ -1,5 +1,5 @@
 import pytest
-from apps.dlp.utils import scan_message
+from apps.dlp.services import scan_message
 from collections import namedtuple
 
 # Simulate the Pattern model using a namedtuple
