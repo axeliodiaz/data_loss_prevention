@@ -20,6 +20,22 @@ def pattern_email():
 
 
 @pytest.fixture
+def pattern_phone():
+    return Pattern.objects.create(
+        name="Phone",
+        regex=r"\b\+?[1-9]\d{0,2}[-.\s]?\(?\d{2,3}\)?[-.\s]\d{3}[-.\s]\d{4}\b",
+    )
+
+
+@pytest.fixture
+def create_patterns(pattern_email, pattern_credit_card, pattern_phone):
+    """
+    Fixture to create test patterns in the database.
+    """
+    return pattern_email, pattern_credit_card, pattern_phone
+
+
+@pytest.fixture
 def client():
     """Fixture for the API client."""
     return APIClient()

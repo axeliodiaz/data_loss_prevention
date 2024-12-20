@@ -3,21 +3,6 @@ from apps.dlp.models import DetectedMessage, Pattern
 from apps.dlp.services import scan_message, create_detected_messages, scan_file
 
 
-@pytest.fixture
-def create_patterns(db):
-    """
-    Fixture to create test patterns in the database.
-    """
-    Pattern.objects.create(name="Credit Card", regex=r"\b\d{4}-\d{4}-\d{4}-\d{4}\b")
-    Pattern.objects.create(
-        name="Email", regex=r"\b[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+\b"
-    )
-    Pattern.objects.create(
-        name="Phone",
-        regex=r"\b\+?[1-9]\d{0,2}[-.\s]?\(?\d{2,3}\)?[-.\s]\d{3}[-.\s]\d{4}\b",
-    )
-
-
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "message,expected_matches",
