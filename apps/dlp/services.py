@@ -42,7 +42,7 @@ def get_file_info(file_id: str) -> str | None:
         file_id (str): The ID of the file to fetch.
 
     Returns:
-        str: The text containing in the file.
+        str: The text contained in the file, or None if an error occurs.
     """
     try:
         response = client.files_info(file=file_id)
@@ -52,10 +52,15 @@ def get_file_info(file_id: str) -> str | None:
 
     if response["ok"]:
         headers = {"Authorization": f"Bearer {SLACK_BOT_TOKEN}"}
-        response = requests.get(
+        file_response = requests.get(
             response["file"]["url_private_download"], headers=headers
         )
-        return response.text
+
+        if file_response.status_code == 200:
+            return file_response.text
+        else:
+            logger.debug(f"Failed to download file: {file_response.status_code}")
+            return None
     else:
         logger.debug(f"Error: {response['error']}")
         return None

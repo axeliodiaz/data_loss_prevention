@@ -6,8 +6,10 @@ from slack_sdk.errors import SlackApiError
 from apps.dlp.models import DetectedMessage
 from apps.dlp.services import (
     create_detected_messages,
+    get_file_info,
 )
 from apps.dlp.services import process_file, scan_message
+from data_loss_prevention.settings import SLACK_BOT_TOKEN
 
 
 @pytest.mark.django_db
@@ -191,3 +193,126 @@ class TestProcessFile:
 
         # Assertions
         assert matches == []
+
+
+class TestGetFileInfo:
+    @pytest.mark.parametrize(
+        "file_id, slack_response, file_content",
+        [
+            (
+                "file123",
+                {
+                    "ok": True,
+                    "file": {
+                        "url_private_download": "https://slack.com/files/private-file"
+                    },
+                },
+                "This is test content from Slack.",
+            ),
+        ],
+    )
+    def test_get_file_info_success(self, mocker, file_id, slack_response, file_content):
+        """
+        Test that get_file_info retrieves file content successfully.
+        """
+        # Mock the Slack client response
+        mock_client = mocker.patch(
+            "apps.dlp.services.client.files_info", return_value=slack_response
+        )
+
+        # Mock the requests.get call to fetch file content
+        mock_requests = mocker.patch("requests.get")
+        mock_requests.return_value = Mock(status_code=200, text=file_content)
+
+        # Call the function
+        result = get_file_info(file_id)
+
+        # Assertions
+        assert result == file_content
+        mock_client.assert_called_once_with(file=file_id)
+        mock_requests.assert_called_once_with(
+            slack_response["file"]["url_private_download"],
+            headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
+        )
+
+    @pytest.mark.parametrize(
+        "file_id, slack_error",
+        [
+            (
+                "file123",
+                SlackApiError(
+                    "An error occurred",
+                    {"error": "file_not_found"},  # Usar un diccionario real
+                ),
+            ),
+        ],
+    )
+    def test_get_file_info_slack_error(self, mocker, file_id, slack_error):
+        """
+        Test that get_file_info handles Slack API errors correctly.
+        """
+        # Mock the Slack client to raise SlackApiError
+        mocker.patch("apps.dlp.services.client.files_info", side_effect=slack_error)
+
+        # Call the function
+        result = get_file_info(file_id)
+
+        # Assertions
+        assert result is None
+
+    @pytest.mark.parametrize(
+        "file_id, slack_response",
+        [
+            (
+                "file123",
+                {"ok": False, "error": "file_not_found"},
+            ),
+        ],
+    )
+    def test_get_file_info_slack_not_ok(self, mocker, file_id, slack_response):
+        """
+        Test that get_file_info handles Slack responses with 'ok': False.
+        """
+        # Mock the Slack client response
+        mocker.patch("apps.dlp.services.client.files_info", return_value=slack_response)
+
+        # Call the function
+        result = get_file_info(file_id)
+
+        # Assertions
+        assert result is None
+
+    @pytest.mark.parametrize(
+        "file_id, slack_response",
+        [
+            (
+                "file123",
+                {
+                    "ok": True,
+                    "file": {
+                        "url_private_download": "https://slack.com/files/private-file"
+                    },
+                },
+            ),
+        ],
+    )
+    def test_get_file_info_failed_file_download(self, mocker, file_id, slack_response):
+        """
+        Test that get_file_info handles file download errors.
+        """
+        # Mock the Slack client response
+        mocker.patch("apps.dlp.services.client.files_info", return_value=slack_response)
+
+        # Mock the requests.get call to simulate a failed file download
+        mock_requests = mocker.patch("requests.get")
+        mock_requests.return_value = Mock(status_code=404, text="")
+
+        # Call the function
+        result = get_file_info(file_id)
+
+        # Assertions
+        assert result is None
+        mock_requests.assert_called_once_with(
+            slack_response["file"]["url_private_download"],
+            headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
+        )
