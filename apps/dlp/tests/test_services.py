@@ -96,14 +96,37 @@ class TestCreateDetectedMessage:
             b"This is a clean file with no sensitive data.",
             [],
         ),
-        # Case 3: Corrupt file content
+        # Case 3: Binary content (corrupt or unsupported format)
         (
-            b"\x89\x50\x4E\x47",  # Binary data (e.g., PNG file header)
+            b"\x89PNG",  # Binary data resembling a PNG file header
             [],
         ),
     ],
 )
 def test_scan_file(create_patterns, file_content, expected):
+    """
+    Test the scan_file function for detecting sensitive patterns in file content.
+
+    This test verifies the ability of scan_file to:
+    1. Detect predefined patterns in textual file content.
+    2. Handle clean files without any matches.
+    3. Safely process binary or corrupt content without raising errors.
+
+    Args:
+        create_patterns (fixture): Creates test patterns in the database.
+        file_content (bytes): The content of the file to be scanned.
+        expected (list): The expected list of matched pattern names.
+
+    Steps:
+    - Calls scan_file with the given file content.
+    - Extracts the names of matched patterns from the results.
+    - Asserts that the matched pattern names match the expected list.
+    """
+    # Call scan_file and collect the results
     matches = scan_file(file_content)
+
+    # Extract the names of the matched patterns
     matched_names = [pattern.name for pattern in matches]
+
+    # Assert that the matched pattern names match the expected results
     assert matched_names == expected
