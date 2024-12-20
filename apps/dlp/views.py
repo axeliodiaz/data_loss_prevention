@@ -1,11 +1,14 @@
 import logging
 
 from django.http import HttpResponseNotAllowed
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from apps.dlp.constants import EVENT_CALLBACK, EVENT_TYPE_MESSAGE, EVENT_TYPE_FILE
+from apps.dlp.constants import EVENT_CALLBACK, EVENT_TYPE_MESSAGE
+from apps.dlp.models import Pattern
+from apps.dlp.serializers import DetectedMessageSerializer
+from apps.dlp.serializers import PatternSerializer
 from apps.dlp.services import scan_message, create_detected_messages, process_file
 
 logger = logging.getLogger(__name__)
@@ -58,3 +61,27 @@ class SlackEventView(APIView, HttpResponseNotAllowed):
     def get(self, request, *args, **kwargs):
         """Disallow GET requests."""
         return HttpResponseNotAllowed(permitted_methods="POST")
+
+
+class PatternListAPIView(APIView):
+    """
+    API endpoint to retrieve all patterns.
+    """
+
+    def get(self, request):
+        patterns = Pattern.objects.all()
+        serializer = PatternSerializer(patterns, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class DetectedMessageCreateAPIView(APIView):
+    """
+    API endpoint to save detected messages.
+    """
+
+    def post(self, request):
+        serializer = DetectedMessageSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

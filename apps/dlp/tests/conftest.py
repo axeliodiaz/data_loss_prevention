@@ -2,7 +2,7 @@ import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from apps.dlp.models import Pattern
+from apps.dlp.models import Pattern, DetectedMessage
 
 
 @pytest.fixture
@@ -73,3 +73,10 @@ def mock_scan_file(mocker):
     Fixture to mock the `scan_file` function.
     """
     return mocker.patch("apps.dlp.services.scan_file")
+
+
+@pytest.fixture
+def detected_message(pattern_email):
+    return DetectedMessage.objects.create(
+        content="This is a test message", pattern=pattern_email
+    )

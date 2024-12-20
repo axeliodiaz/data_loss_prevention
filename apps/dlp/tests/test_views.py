@@ -1,7 +1,11 @@
+import json
+
 import pytest
+from django.urls import reverse
 from rest_framework import status
 
 from apps.dlp.constants import EVENT_CALLBACK, EVENT_TYPE_MESSAGE
+from apps.dlp.models import DetectedMessage
 
 
 @pytest.mark.django_db
@@ -60,3 +64,50 @@ class TestSlackEventView:
         response = client.get(slack_event_url)
 
         assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+
+
+@pytest.mark.django_db
+class TestPatternListAPIView:
+    def test_get_patterns_success(self, client, pattern_email):
+        """
+        Test that the API endpoint returns a list of patterns successfully.
+        """
+        url = reverse("dlp:pattern-list")
+        response = client.get(url)
+
+        # Assertions
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 1
+        assert response.data[0]["name"] == pattern_email.name
+        assert response.data[0]["regex"] == pattern_email.regex
+
+    def test_get_patterns_empty(self, client):
+        """
+        Test that the API endpoint returns an empty list if no patterns exist.
+        """
+        url = reverse("dlp:pattern-list")
+        response = client.get(url)
+
+        # Assertions
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 0
+
+
+@pytest.mark.django_db
+class TestDetectedMessageCreateAPIView:
+    def test_create_detected_message_invalid_payload(self, client):
+        """
+        Test that an invalid payload returns a 400 error.
+        """
+        url = reverse("dlp:detected-message-create")
+        # Incorrect payload (missing pattern field)
+        payload = {"content": "This is a detected message"}
+
+        # Send as JSON
+        response = client.post(
+            url, data=json.dumps(payload), content_type="application/json"
+        )
+
+        # Assertions
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "pattern" in response.data
