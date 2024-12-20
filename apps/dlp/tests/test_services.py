@@ -111,10 +111,11 @@ class TestProcessFile:
         mocker.patch("apps.dlp.services.scan_message", return_value=expected_matches)
 
         # Call the function
-        matches = process_file(file_id)
+        result_content, result_matches = process_file(file_id)
 
         # Assertions
-        assert matches == expected_matches
+        assert result_content == file_content
+        assert result_matches == expected_matches
 
     @pytest.mark.parametrize(
         "file_id, file_info_response",
@@ -138,10 +139,11 @@ class TestProcessFile:
         mocker.patch("apps.dlp.services.get_file_info", return_value=None)
 
         # Call the function
-        matches = process_file(file_id)
+        result_content, result_matches = process_file(file_id)
 
         # Assertions
-        assert matches == []
+        assert result_content is None
+        assert result_matches == []
 
     @pytest.mark.parametrize(
         "file_id, file_content",
@@ -165,15 +167,22 @@ class TestProcessFile:
         mocker.patch("apps.dlp.services.scan_message", return_value=[])
 
         # Call the function
-        matches = process_file(file_id)
+        result_content, result_matches = process_file(file_id)
 
         # Assertions
-        assert matches == []
+        assert result_content == file_content
+        assert result_matches == []
 
     @pytest.mark.parametrize(
         "file_id, slack_error",
         [
-            ("file123", SlackApiError("An error occurred", Mock(status_code=404))),
+            (
+                "file123",
+                SlackApiError(
+                    "An error occurred",
+                    {"error": "file_not_found"},
+                ),
+            ),
         ],
     )
     def test_process_file_slack_error(
@@ -185,14 +194,14 @@ class TestProcessFile:
         """
         Test that process_file handles a Slack API error correctly.
         """
-        # Mock get_file_info to raise SlackApiError
-        mocker.patch("slack_sdk.web.client.WebClient", side_effect=slack_error)
+        mocker.patch("apps.dlp.services.client.files_info", side_effect=slack_error)
 
         # Call the function
-        matches = process_file(file_id)
+        result_content, result_matches = process_file(file_id)
 
         # Assertions
-        assert matches == []
+        assert result_content is None
+        assert result_matches == []
 
 
 class TestGetFileInfo:

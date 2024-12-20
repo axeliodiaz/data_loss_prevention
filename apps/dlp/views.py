@@ -29,10 +29,12 @@ class SlackEventView(APIView, HttpResponseNotAllowed):
                 if "files" in event:
                     for file in event["files"]:
                         file_id = file["id"]
-                        matches = process_file(file_id)
+                        file_content, matches = process_file(file_id)
                         if matches:
                             # Create DetectedMessage objects in bulk
-                            create_detected_messages(message=message, patterns=matches)
+                            create_detected_messages(
+                                message=file_content, patterns=matches
+                            )
                 else:
                     matches = scan_message(message=message)
                     if matches:

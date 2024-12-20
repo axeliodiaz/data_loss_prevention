@@ -66,23 +66,31 @@ def get_file_info(file_id: str) -> str | None:
         return None
 
 
-def process_file(file_id) -> list:
-    """Get the file from Slack to be analized."""
+def process_file(file_id) -> tuple[str | None, list]:
+    """
+    Get the file from Slack to be analyzed.
+
+    Args:
+        file_id (str): The ID of the file to fetch from Slack.
+
+    Returns:
+        tuple: The file content (str or None) and the list of matches (list).
+    """
     matches = []
     file_content = get_file_info(file_id=file_id)
 
     if file_content:
-        # Analize the file
+        # Analyze the file
         matches = scan_message(file_content)
 
-    return matches
+    return file_content, matches
 
 
 def create_detected_messages(
     message: str, patterns: List[Pattern]
 ) -> List[DetectedMessage]:
     """
-    Create DetectedMessage objects for each detected pattern using bulk_create.
+    Create DetectedMessage objects for each detected pattern individually.
 
     Args:
         message (str): The content of the detected message.
@@ -91,10 +99,12 @@ def create_detected_messages(
     Returns:
         List[DetectedMessage]: A list of created DetectedMessage instances.
     """
-    detected_messages = [
-        DetectedMessage(content=message, pattern=pattern) for pattern in patterns
-    ]
-    DetectedMessage.objects.bulk_create(detected_messages)
+    detected_messages = []
+    for pattern in patterns:
+        detected_message = DetectedMessage.objects.create(
+            content=message, pattern=pattern
+        )
+        detected_messages.append(detected_message)
 
     logger.info(f"Detected message: {message}")
     return detected_messages
