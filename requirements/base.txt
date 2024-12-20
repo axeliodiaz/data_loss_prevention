@@ -10,3 +10,4 @@ django-model-utils==5.0.0
 black[d]==24.10.0
 djangorestframework==3.15.2
 boto3==1.35.85
+python-dotenv==1.0.1

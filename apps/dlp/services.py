@@ -3,11 +3,16 @@ import re
 from typing import List
 
 import requests
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 
 from apps.dlp.models import DetectedMessage, Pattern
 from data_loss_prevention.settings import SLACK_BOT_TOKEN
 
 logger = logging.getLogger(__name__)
+
+
+client = WebClient(token=SLACK_BOT_TOKEN)
 
 
 def scan_message(message: str):
@@ -29,50 +34,42 @@ def scan_message(message: str):
     return matches
 
 
-def process_file(file_id):
-    """Get the file from Slack to be analized."""
-    response = requests.get(
-        "https://slack.com/api/files.info",
-        headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
-        params={"file": file_id},
-    )
-
-    file_info = response.json()
-
-    if file_info.get("ok"):
-        file_url = file_info["file"]["url_private"]
-
-        # Download the file
-        file_content = requests.get(
-            file_url, headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"}
-        ).content
-
-        # Analize the file
-        scan_file(file_content)
-
-    else:
-        logger.debug(f"Error getting info from file: {file_info}")
-
-
-def scan_file(file_content: bytes) -> list:
+def get_file_info(file_id: str) -> str | None:
     """
-    Scans the content of a file for sensitive patterns by reusing `scan_message`.
+    Fetch file information from Slack using slack-sdk.
 
     Args:
-        file_content (bytes): The file content as bytes.
+        file_id (str): The ID of the file to fetch.
 
     Returns:
-        list: List of matching patterns found in the file.
+        str: The text containing in the file.
     """
-    # Convert file content to string
     try:
-        text_content = file_content.decode("utf-8")
-    except UnicodeDecodeError:
-        logger.debug("Could not decode the file content as text.")
-        return []
+        response = client.files_info(file=file_id)
+    except SlackApiError as e:
+        logger.debug(f"Slack API Error: {e.response['error']}")
+        return None
 
-    # Reuse scan_message to search for matches
-    matches = scan_message(text_content)
+    if response["ok"]:
+        headers = {"Authorization": f"Bearer {SLACK_BOT_TOKEN}"}
+        response = requests.get(
+            response["file"]["url_private_download"], headers=headers
+        )
+        return response.text
+    else:
+        logger.debug(f"Error: {response['error']}")
+        return None
+
+
+def process_file(file_id) -> list:
+    """Get the file from Slack to be analized."""
+    matches = []
+    file_content = get_file_info(file_id=file_id)
+
+    if file_content:
+        # Analize the file
+        matches = scan_message(file_content)
+
     return matches
 
 
@@ -93,4 +90,6 @@ def create_detected_messages(
         DetectedMessage(content=message, pattern=pattern) for pattern in patterns
     ]
     DetectedMessage.objects.bulk_create(detected_messages)
+
+    logger.info(f"Detected message: {message}")
     return detected_messages

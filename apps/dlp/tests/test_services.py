@@ -1,13 +1,13 @@
-import pytest
+from unittest.mock import Mock
 
-from apps.dlp.models import DetectedMessage, Pattern
+import pytest
+from slack_sdk.errors import SlackApiError
+
+from apps.dlp.models import DetectedMessage
 from apps.dlp.services import (
-    scan_message,
     create_detected_messages,
-    scan_file,
-    process_file,
 )
-from data_loss_prevention.settings import SLACK_BOT_TOKEN
+from apps.dlp.services import process_file, scan_message
 
 
 @pytest.mark.django_db
@@ -74,141 +74,120 @@ class TestCreateDetectedMessage:
         assert DetectedMessage.objects.count() == 0
 
 
-@pytest.mark.django_db
-@pytest.mark.parametrize(
-    "file_content,expected",
-    [
-        # Case 1: File with sensitive patterns
-        (
-            b"This is a test with credit card 1234-5678-9012-3456.",
-            ["Credit Card"],
-        ),
-        # Case 2: File without sensitive patterns
-        (
-            b"This is a clean file with no sensitive data.",
-            [],
-        ),
-        # Case 3: Binary content (corrupt or unsupported format)
-        (
-            b"\x89PNG",  # Binary data resembling a PNG file header
-            [],
-        ),
-    ],
-)
-def test_scan_file(create_patterns, file_content, expected):
-    """
-    Test the scan_file function for detecting sensitive patterns in file content.
-
-    This test verifies the ability of scan_file to:
-    1. Detect predefined patterns in textual file content.
-    2. Handle clean files without any matches.
-    3. Safely process binary or corrupt content without raising errors.
-
-    Args:
-        create_patterns (fixture): Creates test patterns in the database.
-        file_content (bytes): The content of the file to be scanned.
-        expected (list): The expected list of matched pattern names.
-
-    Steps:
-    - Calls scan_file with the given file content.
-    - Extracts the names of matched patterns from the results.
-    - Asserts that the matched pattern names match the expected list.
-    """
-    # Call scan_file and collect the results
-    matches = scan_file(file_content)
-
-    # Extract the names of the matched patterns
-    matched_names = [pattern.name for pattern in matches]
-
-    # Assert that the matched pattern names match the expected results
-    assert matched_names == expected
-
-
 class TestProcessFile:
     @pytest.mark.parametrize(
-        "file_id, file_info_response, file_content",
+        "file_id, file_info_response, file_content, expected_matches",
         [
             (
                 "file123",
                 {
                     "ok": True,
-                    "file": {"url_private": "https://slack.com/files/private-file"},
+                    "file": {
+                        "url_private_download": "https://slack.com/files/private-file"
+                    },
                 },
-                b"This is test content from Slack.",
+                "This is test content from Slack.",
+                ["test"],  # Simulated matches from scan_message
             ),
         ],
     )
     def test_process_file_success(
         self,
         mocker,
-        mock_requests_get,
-        mock_scan_file,
         file_id,
         file_info_response,
         file_content,
+        expected_matches,
     ):
         """
         Test that process_file successfully retrieves and scans a file.
         """
-        # Mock the response for files.info
-        mock_requests_get.side_effect = [
-            mocker.Mock(json=lambda: file_info_response),
-            mocker.Mock(content=file_content),
-        ]
+        # Mock get_file_info to return file content
+        mocker.patch("apps.dlp.services.get_file_info", return_value=file_content)
+
+        # Mock scan_message to return expected matches
+        mocker.patch("apps.dlp.services.scan_message", return_value=expected_matches)
 
         # Call the function
-        process_file(file_id)
+        matches = process_file(file_id)
 
         # Assertions
-        mock_requests_get.assert_any_call(
-            "https://slack.com/api/files.info",
-            headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
-            params={"file": file_id},
-        )
-        mock_requests_get.assert_any_call(
-            file_info_response["file"]["url_private"],
-            headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
-        )
-        mock_scan_file.assert_called_once_with(file_content)
+        assert matches == expected_matches
 
     @pytest.mark.parametrize(
-        "file_id, file_info_response, file_content",
+        "file_id, file_info_response",
         [
             (
                 "file123",
-                {
-                    "ok": True,
-                    "file": {"url_private": "https://slack.com/files/private-file"},
-                },
-                b"",
+                {"ok": False, "error": "file_not_found"},
             ),
+        ],
+    )
+    def test_process_file_no_file(
+        self,
+        mocker,
+        file_id,
+        file_info_response,
+    ):
+        """
+        Test that process_file handles an error when file info is unavailable.
+        """
+        # Mock get_file_info to return None
+        mocker.patch("apps.dlp.services.get_file_info", return_value=None)
+
+        # Call the function
+        matches = process_file(file_id)
+
+        # Assertions
+        assert matches == []
+
+    @pytest.mark.parametrize(
+        "file_id, file_content",
+        [
+            ("file123", ""),
         ],
     )
     def test_process_file_empty_file(
         self,
         mocker,
-        mock_requests_get,
-        mock_scan_file,
         file_id,
-        file_info_response,
         file_content,
     ):
         """
         Test that process_file handles an empty file correctly.
         """
-        # Mock the response for files.info
-        mock_requests_get.side_effect = [
-            mocker.Mock(json=lambda: file_info_response),  # First call to files.info
-            mocker.Mock(content=file_content),  # Second call to download the file
-        ]
+        # Mock get_file_info to return empty content
+        mocker.patch("apps.dlp.services.get_file_info", return_value=file_content)
+
+        # Mock scan_message to return an empty list
+        mocker.patch("apps.dlp.services.scan_message", return_value=[])
 
         # Call the function
-        process_file(file_id)
+        matches = process_file(file_id)
 
         # Assertions
-        mock_requests_get.assert_any_call(
-            "https://slack.com/api/files.info",
-            headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
-            params={"file": file_id},
-        )
-        mock_scan_file.assert_called_once_with(file_content)
+        assert matches == []
+
+    @pytest.mark.parametrize(
+        "file_id, slack_error",
+        [
+            ("file123", SlackApiError("An error occurred", Mock(status_code=404))),
+        ],
+    )
+    def test_process_file_slack_error(
+        self,
+        mocker,
+        file_id,
+        slack_error,
+    ):
+        """
+        Test that process_file handles a Slack API error correctly.
+        """
+        # Mock get_file_info to raise SlackApiError
+        mocker.patch("slack_sdk.web.client.WebClient", side_effect=slack_error)
+
+        # Call the function
+        matches = process_file(file_id)
+
+        # Assertions
+        assert matches == []

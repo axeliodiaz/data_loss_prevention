@@ -24,17 +24,20 @@ class SlackEventView(APIView, HttpResponseNotAllowed):
             event = data.get("event", {})
             message = event.get("text")
 
-            if event.get("type") == EVENT_TYPE_FILE:
-                file_id = event.get("file_id")
-                process_file(file_id)
-
             if event.get("type") == EVENT_TYPE_MESSAGE:
                 logger.info(f"Message received: {message}")
-                matches = scan_message(message=message)
-
-                if matches:
-                    # Create DetectedMessage objects in bulk
-                    create_detected_messages(message=message, patterns=matches)
+                if "files" in event:
+                    for file in event["files"]:
+                        file_id = file["id"]
+                        matches = process_file(file_id)
+                        if matches:
+                            # Create DetectedMessage objects in bulk
+                            create_detected_messages(message=message, patterns=matches)
+                else:
+                    matches = scan_message(message=message)
+                    if matches:
+                        # Create DetectedMessage objects in bulk
+                        create_detected_messages(message=message, patterns=matches)
             else:
                 logger.debug(f"Unhandled event type: {event.get('type')}")
         return data
