@@ -1,4 +1,10 @@
 services:
+  sqs:
+    image: softwaremill/elasticmq
+    container_name: sqs-container
+    ports:
+      - "9324:9324"
+      - "9325:9325"
   db:
     image: mysql:8.0
     container_name: mysql-container

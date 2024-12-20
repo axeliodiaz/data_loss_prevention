@@ -1,11 +1,12 @@
 import logging
+
 from django.http import HttpResponseNotAllowed
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from apps.dlp.constants import EVENT_CALLBACK, EVENT_TYPE_MESSAGE
-from apps.dlp.services import scan_message, create_detected_messages
+from apps.dlp.constants import EVENT_CALLBACK, EVENT_TYPE_MESSAGE, EVENT_TYPE_FILE
+from apps.dlp.services import scan_message, create_detected_messages, process_file
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,11 @@ class SlackEventView(APIView, HttpResponseNotAllowed):
         if event_type and event_type == EVENT_CALLBACK:
             event = data.get("event", {})
             message = event.get("text")
+
+            if event.get("type") == EVENT_TYPE_FILE:
+                file_id = event.get("file_id")
+                process_file(file_id)
+
             if event.get("type") == EVENT_TYPE_MESSAGE:
                 logger.info(f"Message received: {message}")
                 matches = scan_message(message=message)

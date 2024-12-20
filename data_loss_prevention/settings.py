@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 
 import pymysql
+import boto3
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -98,6 +99,16 @@ DATABASES = {
     }
 }
 
+
+# SQS configuration
+sqs = boto3.client(
+    "sqs",
+    endpoint_url="http://localhost:9324",
+    region_name="us-east-1",
+    aws_access_key_id="fake_access_key",
+    aws_secret_access_key="fake_secret_key",
+)
+queue_url = "http://localhost:9324/queue/dlp-queue"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
