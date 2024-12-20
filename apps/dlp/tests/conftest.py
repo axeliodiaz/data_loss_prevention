@@ -57,3 +57,19 @@ def mock_logger_info(mocker):
 def mock_logger_debug(mocker):
     """Mock the logger.debug method for SlackEventView."""
     return mocker.patch("apps.dlp.views.logger.debug")
+
+
+@pytest.fixture
+def mock_requests_get(mocker):
+    """
+    Fixture to mock the `requests.get` method.
+    """
+    return mocker.patch("requests.get")
+
+
+@pytest.fixture
+def mock_scan_file(mocker):
+    """
+    Fixture to mock the `scan_file` function.
+    """
+    return mocker.patch("apps.dlp.services.scan_file")

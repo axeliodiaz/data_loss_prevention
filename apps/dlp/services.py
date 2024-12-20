@@ -1,13 +1,11 @@
 import logging
 import re
-
 from typing import List
 
-from django.contrib.sites import requests
+import requests
 
 from apps.dlp.models import DetectedMessage, Pattern
 from data_loss_prevention.settings import SLACK_BOT_TOKEN
-
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +29,7 @@ def scan_message(message: str):
     return matches
 
 
-def process_file(self, file_id):
+def process_file(file_id):
     """Get the file from Slack to be analized."""
     response = requests.get(
         "https://slack.com/api/files.info",

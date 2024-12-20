@@ -1,6 +1,13 @@
 import pytest
+
 from apps.dlp.models import DetectedMessage, Pattern
-from apps.dlp.services import scan_message, create_detected_messages, scan_file
+from apps.dlp.services import (
+    scan_message,
+    create_detected_messages,
+    scan_file,
+    process_file,
+)
+from data_loss_prevention.settings import SLACK_BOT_TOKEN
 
 
 @pytest.mark.django_db
@@ -115,3 +122,93 @@ def test_scan_file(create_patterns, file_content, expected):
 
     # Assert that the matched pattern names match the expected results
     assert matched_names == expected
+
+
+class TestProcessFile:
+    @pytest.mark.parametrize(
+        "file_id, file_info_response, file_content",
+        [
+            (
+                "file123",
+                {
+                    "ok": True,
+                    "file": {"url_private": "https://slack.com/files/private-file"},
+                },
+                b"This is test content from Slack.",
+            ),
+        ],
+    )
+    def test_process_file_success(
+        self,
+        mocker,
+        mock_requests_get,
+        mock_scan_file,
+        file_id,
+        file_info_response,
+        file_content,
+    ):
+        """
+        Test that process_file successfully retrieves and scans a file.
+        """
+        # Mock the response for files.info
+        mock_requests_get.side_effect = [
+            mocker.Mock(json=lambda: file_info_response),
+            mocker.Mock(content=file_content),
+        ]
+
+        # Call the function
+        process_file(file_id)
+
+        # Assertions
+        mock_requests_get.assert_any_call(
+            "https://slack.com/api/files.info",
+            headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
+            params={"file": file_id},
+        )
+        mock_requests_get.assert_any_call(
+            file_info_response["file"]["url_private"],
+            headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
+        )
+        mock_scan_file.assert_called_once_with(file_content)
+
+    @pytest.mark.parametrize(
+        "file_id, file_info_response, file_content",
+        [
+            (
+                "file123",
+                {
+                    "ok": True,
+                    "file": {"url_private": "https://slack.com/files/private-file"},
+                },
+                b"",
+            ),
+        ],
+    )
+    def test_process_file_empty_file(
+        self,
+        mocker,
+        mock_requests_get,
+        mock_scan_file,
+        file_id,
+        file_info_response,
+        file_content,
+    ):
+        """
+        Test that process_file handles an empty file correctly.
+        """
+        # Mock the response for files.info
+        mock_requests_get.side_effect = [
+            mocker.Mock(json=lambda: file_info_response),  # First call to files.info
+            mocker.Mock(content=file_content),  # Second call to download the file
+        ]
+
+        # Call the function
+        process_file(file_id)
+
+        # Assertions
+        mock_requests_get.assert_any_call(
+            "https://slack.com/api/files.info",
+            headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
+            params={"file": file_id},
+        )
+        mock_scan_file.assert_called_once_with(file_content)
