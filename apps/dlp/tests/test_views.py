@@ -5,7 +5,6 @@ from django.urls import reverse
 from rest_framework import status
 
 from apps.dlp.constants import EVENT_CALLBACK, EVENT_TYPE_MESSAGE
-from apps.dlp.models import DetectedMessage
 
 
 @pytest.mark.django_db

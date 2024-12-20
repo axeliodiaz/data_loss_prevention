@@ -1,8 +1,16 @@
 import logging
+import urllib
+
 import requests
 import re
 
-BASE_URL = "http://django-backend-url/api/dlp"
+from django.conf import settings
+from django.urls import reverse
+
+detected_messages_url = urllib.parse.urljoin(
+    settings.BASE_URL, reverse("dlp:detected-message-create")
+)
+pattern_url = urllib.parse.urljoin(settings.BASE_URL, reverse("dlp:pattern-list"))
 
 logger = logging.getLogger(__name__)
 
@@ -12,12 +20,12 @@ async def fetch_patterns():
     Fetch patterns from the backend API.
     """
     try:
-        response = requests.get(f"{BASE_URL}/patterns/")
-        response.raise_for_status()
-        return response.json()
+        response = requests.get(pattern_url)
     except requests.RequestException as e:
         logger.error(f"Failed to fetch patterns: {e}")
         return []
+    response.raise_for_status()
+    return response.json()
 
 
 async def send_detected_message(content: str, pattern_id: str):
@@ -26,7 +34,7 @@ async def send_detected_message(content: str, pattern_id: str):
     """
     payload = {"content": content, "pattern": pattern_id}
     try:
-        response = requests.post(f"{BASE_URL}/detected-messages/", json=payload)
+        response = requests.post(detected_messages_url, json=payload)
         response.raise_for_status()
         logger.info("Detected message sent successfully.")
     except requests.RequestException as e:
