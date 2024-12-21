@@ -72,8 +72,6 @@ cd <repo_name>
 Create a `.env` file in the root directory with the following variables:
 
 ```dotenv
-SECRET_KEY=<django_secret_key>
-DEBUG=True
 DB_NAME=dlp_project
 DB_USER=admin
 DB_PASSWORD=password
