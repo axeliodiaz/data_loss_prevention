@@ -31,6 +31,7 @@ class SlackEventView(APIView, HttpResponseNotAllowed):
                 ts = event.get("ts", "")
 
                 if "files" in event:
+                    logger.info("Checking file sent file")
                     for file in event["files"]:
                         file_id = file["id"]
                         # Send to SQS queue
@@ -39,6 +40,7 @@ class SlackEventView(APIView, HttpResponseNotAllowed):
                             kwargs={"file_id": file_id, "channel_id": channel_id},
                         )
                 elif message:
+                    logger.info("Checking message sent")
                     # Send to SQS queue
                     send_to_sqs(
                         task_name="process_message",
