@@ -80,6 +80,7 @@ DB_PASSWORD=password
 DB_HOST=db
 DB_PORT=3306
 SLACK_BOT_TOKEN=<your_slack_bot_token>
+SLACK_USER_TOKEN=<your_slack_user_token>
 AWS_SQS_ENDPOINT_URL=http://elasticmq:9324
 AWS_REGION_NAME=us-east-1
 AWS_ACCESS_KEY_ID=dummy
@@ -167,6 +168,91 @@ RUN pip install --no-cache-dir -r requirements/local.txt
 COPY . /app
 EXPOSE 8000
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+```
+
+## Slack Integration Features
+
+### Message and File Management
+
+The DLP system integrates with Slack to detect and block messages or files that contain sensitive information. The following features are implemented:
+
+1. **Message Replacement**:
+   - When a message containing sensitive information is detected, the system replaces it with a blocking message:
+     ```
+     Message was blocked due to containing sensitive information.
+     ```
+
+   - **Functionality**:
+     - The function `replace_message` is used to update messages in Slack.
+     - Requires the `chat:write` permission for the bot token or `chat:write:user` for user tokens.
+
+2. **File Deletion and Notification**:
+   - Files containing sensitive information are deleted, and a notification message is posted in the Slack channel.
+     - Example notification:
+       ```
+       File containing sensitive information has been removed.
+       ```
+
+   - **Functionality**:
+     - The function `delete_file_and_notify` handles file deletion and posting the notification.
+     - Requires the `files:write` permission for the user token.
+
+### Required Permissions
+
+To enable these features, ensure that your bot or user token has the following permissions:
+- `chat:write`
+- `files:write`
+- `channels:history`
+- `groups:history`
+- `im:history`
+- `mpim:history`
+
+### How It Works
+
+1. **Message Replacement Flow**:
+   - Messages are scanned using predefined patterns.
+   - If sensitive information is detected:
+     - A `DetectedMessage` object is created for logging purposes.
+     - The message is replaced using the `replace_message` function.
+
+2. **File Deletion Flow**:
+   - Files uploaded to Slack are scanned for sensitive content.
+   - If sensitive information is detected:
+     - The file is deleted using the `delete_file_and_notify` function.
+     - A notification message is posted in the same Slack channel.
+
+### Configuration
+
+Update your environment variables to include:
+- `SLACK_BOT_TOKEN`: Token for the bot with appropriate permissions.
+- `SLACK_USER_TOKEN`: User token (required for file deletion).
+- `SLACK_BLOCKING_MESSAGE`: Default blocking message for messages with sensitive content.
+- `SLACK_BLOCKING_FILE`: Default blocking message for deleted files.
+
+### Usage
+
+#### Replace a Message
+The `replace_message` function can be used as follows:
+```python
+from apps.dlp.services import replace_message
+
+replace_message(
+    channel_id="C123456",
+    ts="1626181234.000200",
+    new_message="Message was blocked due to containing sensitive information.",
+)
+```
+
+#### Delete a File and Notify
+The `delete_file_and_notify function can be used as follows:
+```python
+from apps.dlp.services import delete_file_and_notify
+
+delete_file_and_notify(
+    file_id="file123",
+    channel_id="C123456",
+    message="A file containing sensitive information has been removed.",
+)
 ```
 
 ##	Notes

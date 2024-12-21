@@ -3,16 +3,18 @@ import re
 from typing import List
 
 import requests
-from slack_sdk import WebClient
-from slack_sdk.errors import SlackApiError
 
+from apps.dlp.constants import SLACK_BLOCKING_FILE
 from apps.dlp.models import DetectedMessage, Pattern
-from data_loss_prevention.settings import SLACK_BOT_TOKEN
+from data_loss_prevention.settings import SLACK_BOT_TOKEN, SLACK_USER_TOKEN
 
 logger = logging.getLogger(__name__)
 
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 
-client = WebClient(token=SLACK_BOT_TOKEN)
+
+client = WebClient(token=SLACK_USER_TOKEN)
 
 
 def scan_message(message: str):
@@ -26,6 +28,10 @@ def scan_message(message: str):
     Returns:
         list: List of matching patterns.
     """
+    if not isinstance(message, (str, bytes)):
+        logger.error("Invalid message type passed to scan_message: %s", type(message))
+        return []
+
     matches = []
     patterns = Pattern.objects.all()
     for pattern in patterns:
@@ -108,3 +114,70 @@ def create_detected_messages(
 
     logger.info(f"Detected message: {message}")
     return detected_messages
+
+
+def replace_message(channel_id, ts, new_message):
+    """
+    Replaces a message in Slack with a new one.
+
+    Args:
+        channel_id (str): The ID of the Slack channel.
+        ts (str): The timestamp of the original message.
+        new_message (str): The replacement message.
+
+    Returns:
+        dict: The response from Slack API.
+    """
+    try:
+        response = client.chat_update(
+            channel=channel_id,
+            ts=ts,
+            text=new_message,
+        )
+    except SlackApiError as e:
+        logger.error(f"Error replacing message: {e.response['error']}")
+        return None
+
+    logger.info(f"Message replaced: {response}")
+    return response
+
+
+def delete_file_and_notify(
+    file_id,
+    channel_id,
+    message=SLACK_BLOCKING_FILE,
+):
+    """
+    Delete a file and notify the channel about its removal.
+
+    Args:
+        file_id (str): The ID of the file to delete.
+        channel_id (str): The ID of the Slack channel where the file was shared.
+        message (str): The message to post after deleting the file.
+    """
+    try:
+        # Delete the file
+        response = client.files_delete(file=file_id)
+
+        if response["ok"]:
+            logger.info(f"File {file_id} deleted successfully.")
+
+            # Send a notification message to the channel
+            try:
+                notify_response = client.chat_postMessage(
+                    channel=channel_id, text=message
+                )
+                if notify_response["ok"]:
+                    logger.info(f"Notification message sent to channel {channel_id}.")
+                else:
+                    logger.error(
+                        f"Failed to send notification: {notify_response['error']}"
+                    )
+            except SlackApiError as notify_error:
+                logger.error(
+                    f"Slack API Error while notifying: {notify_error.response['error']}"
+                )
+        else:
+            logger.error(f"Failed to delete file: {response['error']}")
+    except SlackApiError as e:
+        logger.error(f"Slack API Error: {e.response['error']}")
