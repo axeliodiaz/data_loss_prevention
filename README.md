@@ -199,7 +199,7 @@ The DLP system integrates with Slack to detect and block messages or files that 
      - The function `delete_file_and_notify` handles file deletion and posting the notification.
      - Requires the `files:write` permission for the user token.
 
-## Slack Bot Configuration
+### Slack Bot Configuration
 
 To ensure the Slack bot works correctly, follow these steps to configure the bot on your Slack workspace:
 
