@@ -255,6 +255,9 @@ delete_file_and_notify(
 )
 ```
 
+#### Slack demo video
+[Download Demo Video](docs/video.gif)
+
 ##	Notes
 1.	Message Queue:
 ElasticMQ is used for local SQS emulation. Ensure it is running and accessible at http://elasticmq:9324.
