@@ -1,14 +1,17 @@
-# Use Python base image
+# Use an official Python runtime as a parent image
 FROM python:3.10-slim
 
-# Set working directory
+# Set the working directory in the container
 WORKDIR /app
 
-# Copy project files
-COPY . /app
+# Copy the requirements file
+COPY requirements.txt .
 
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Command to run the application
+# Copy the application code
+COPY . /app
+
+# Command to run the distributed task manager
 CMD ["python", "main.py"]

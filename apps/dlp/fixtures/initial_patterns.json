@@ -1,0 +1,38 @@
+[
+{
+    "model": "dlp.pattern",
+    "pk": "31097313-b1ce-4bf2-9343-dd09d07d3327",
+    "fields": {
+        "is_removed": false,
+        "name": "Phone Number 2",
+        "regex": "\\+?\\d{1,3}[-.\\s]?\\(?\\d{1,4}\\)?[-.\\s]?\\d{1,4}[-.\\s]?\\d{1,9}"
+    }
+},
+{
+    "model": "dlp.pattern",
+    "pk": "426cb1e7-dea0-4251-bc1f-a5f1298cb45b",
+    "fields": {
+        "is_removed": false,
+        "name": "Phone Number",
+        "regex": "\\b\\+?[1-9]\\d{0,2}[-.\\s]?\\(?\\d{2,3}\\)?[-.\\s]\\d{3}[-.\\s]\\d{4}\\b"
+    }
+},
+{
+    "model": "dlp.pattern",
+    "pk": "7990c87e-96e7-48e6-af45-ee24c7483ae3",
+    "fields": {
+        "is_removed": false,
+        "name": "Credit Card",
+        "regex": "\\b\\d{4}-\\d{4}-\\d{4}-\\d{4}\\b"
+    }
+},
+{
+    "model": "dlp.pattern",
+    "pk": "fd12c4bd-457a-4bf6-9522-dd7bd796c777",
+    "fields": {
+        "is_removed": false,
+        "name": "Email Address",
+        "regex": "\\b[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+\\b"
+    }
+}
+]

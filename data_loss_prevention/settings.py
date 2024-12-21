@@ -26,7 +26,7 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = os.getenv("BASE_URL", "")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -111,15 +111,22 @@ DATABASES = {
 }
 
 
+# Amazon Web Service
+AWS_SQS_ENDPOINT_URL = "http://elasticmq:9324"
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+AWS_REGION_NAME = os.getenv("us-east-1", "")
+
 # SQS configuration
 sqs = boto3.client(
     "sqs",
-    endpoint_url="http://localhost:9324",
-    region_name="us-east-1",
-    aws_access_key_id="fake_access_key",
-    aws_secret_access_key="fake_secret_key",
+    endpoint_url=AWS_SQS_ENDPOINT_URL,
+    region_name=AWS_REGION_NAME,
+    aws_access_key_id=AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
 )
 queue_url = "http://localhost:9324/queue/dlp-queue"
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

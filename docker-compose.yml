@@ -1,16 +1,9 @@
 services:
-  sqs:
-    image: softwaremill/elasticmq
-    container_name: sqs-container
-    ports:
-      - "9324:9324"
-      - "9325:9325"
   db:
     image: mysql:8.0
     container_name: mysql-container
-    restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: dlp_project
       MYSQL_USER: admin
       MYSQL_PASSWORD: password
@@ -18,6 +11,38 @@ services:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
+
+  web:
+    build:
+      context: .
+    container_name: django_backend
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py createqueue &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+  dlp_distributed:
+    build:
+      context: ./dlp_distributed
+    container_name: dlp_distributed
+    volumes:
+      - ./dlp_distributed:/app
+    command: python main.py
+    depends_on:
+      - web
+      - elasticmq
+
+  elasticmq:
+    image: softwaremill/elasticmq
+    container_name: elasticmq
+    ports:
+      - "9324:9324"
 
 volumes:
   db_data:
