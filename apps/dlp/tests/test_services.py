@@ -1,4 +1,5 @@
-from unittest.mock import Mock
+import json
+from unittest.mock import MagicMock, Mock
 
 import pytest
 from slack_sdk.errors import SlackApiError
@@ -10,8 +11,10 @@ from apps.dlp.services import (
     get_file_info,
     delete_file_and_notify,
     replace_message,
+    process_file,
+    scan_message,
+    send_to_sqs,
 )
-from apps.dlp.services import process_file, scan_message
 from data_loss_prevention.settings import SLACK_BOT_TOKEN
 
 
@@ -428,3 +431,123 @@ def test_delete_file_and_notify(
     # Verify logger calls
     for log_method, log_message in expected_log_calls:
         getattr(mock_logger, log_method).assert_any_call(log_message)
+
+
+class TestSendToSQS:
+
+    @pytest.mark.django_db
+    def test_send_to_sqs_success(self, mocker):
+        """Test that send_to_sqs sends a message to SQS successfully."""
+        mock_sqs_client = mocker.patch("apps.dlp.services.boto3.client")
+        mock_send_message = MagicMock()
+        mock_sqs_client.return_value.send_message = mock_send_message
+
+        # Mock settings values
+        mocker.patch(
+            "django.conf.settings.AWS_SQS_QUEUE_URL", "https://example.com/queue"
+        )
+        mocker.patch(
+            "django.conf.settings.AWS_SQS_ENDPOINT_URL", "http://localhost:9324"
+        )
+        mocker.patch("django.conf.settings.AWS_REGION_NAME", "us-east-1")
+        mocker.patch("django.conf.settings.AWS_ACCESS_KEY_ID", "test-access-key")
+        mocker.patch("django.conf.settings.AWS_SECRET_ACCESS_KEY", "test-secret-key")
+
+        task_name = "process_message"
+        args = ["test_message"]
+        kwargs = {"extra_data": "value"}
+
+        send_to_sqs(task_name, args, kwargs)
+
+        # Assertions
+        mock_sqs_client.assert_called_once_with(
+            "sqs",
+            endpoint_url="http://localhost:9324",
+            region_name="us-east-1",
+            aws_access_key_id="test-access-key",
+            aws_secret_access_key="test-secret-key",
+        )
+
+        expected_message = {
+            "task": task_name,
+            "args": args,
+            "kwargs": kwargs,
+        }
+        mock_send_message.assert_called_once_with(
+            QueueUrl="https://example.com/queue",
+            MessageBody=json.dumps(expected_message),
+        )
+
+    @pytest.mark.django_db
+    def test_send_to_sqs_with_defaults(self, mocker):
+        """Test that send_to_sqs works with default args and kwargs."""
+        mock_sqs_client = mocker.patch("apps.dlp.services.boto3.client")
+        mock_send_message = MagicMock()
+        mock_sqs_client.return_value.send_message = mock_send_message
+
+        # Mock settings values
+        mocker.patch(
+            "django.conf.settings.AWS_SQS_QUEUE_URL", "https://example.com/queue"
+        )
+        mocker.patch(
+            "django.conf.settings.AWS_SQS_ENDPOINT_URL", "http://localhost:9324"
+        )
+        mocker.patch("django.conf.settings.AWS_REGION_NAME", "us-east-1")
+        mocker.patch("django.conf.settings.AWS_ACCESS_KEY_ID", "test-access-key")
+        mocker.patch("django.conf.settings.AWS_SECRET_ACCESS_KEY", "test-secret-key")
+
+        task_name = "process_file"
+
+        send_to_sqs(task_name)
+
+        # Assertions
+        mock_sqs_client.assert_called_once_with(
+            "sqs",
+            endpoint_url="http://localhost:9324",
+            region_name="us-east-1",
+            aws_access_key_id="test-access-key",
+            aws_secret_access_key="test-secret-key",
+        )
+
+        expected_message = {
+            "task": task_name,
+            "args": [],
+            "kwargs": {},
+        }
+        mock_send_message.assert_called_once_with(
+            QueueUrl="https://example.com/queue",
+            MessageBody=json.dumps(expected_message),
+        )
+
+    @pytest.mark.django_db
+    def test_send_to_sqs_failure(self, mocker):
+        """Test that send_to_sqs handles errors from SQS."""
+        mock_sqs_client = mocker.patch("apps.dlp.services.boto3.client")
+        mock_send_message = MagicMock(side_effect=Exception("SQS Error"))
+        mock_sqs_client.return_value.send_message = mock_send_message
+
+        # Mock settings values
+        mocker.patch(
+            "django.conf.settings.AWS_SQS_QUEUE_URL", "https://example.com/queue"
+        )
+        mocker.patch(
+            "django.conf.settings.AWS_SQS_ENDPOINT_URL", "http://localhost:9324"
+        )
+        mocker.patch("django.conf.settings.AWS_REGION_NAME", "us-east-1")
+        mocker.patch("django.conf.settings.AWS_ACCESS_KEY_ID", "test-access-key")
+        mocker.patch("django.conf.settings.AWS_SECRET_ACCESS_KEY", "test-secret-key")
+
+        task_name = "process_file"
+
+        with pytest.raises(Exception, match="SQS Error"):
+            send_to_sqs(task_name)
+
+        # Assertions
+        mock_sqs_client.assert_called_once_with(
+            "sqs",
+            endpoint_url="http://localhost:9324",
+            region_name="us-east-1",
+            aws_access_key_id="test-access-key",
+            aws_secret_access_key="test-secret-key",
+        )
+        mock_send_message.assert_called_once()
