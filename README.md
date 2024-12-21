@@ -49,11 +49,15 @@ This project implements a Data Loss Prevention (DLP) system to analyze messages 
 │       ├── __init__.py
 │       └── test_tasks.py
 ├── docker-compose.yml
+├── docs
+│   └── video.gif
 ├── manage.py
 ├── pytest.ini
 └── requirements
     ├── base.txt
     └── local.txt
+
+11 directories, 41 files
 ```
 
 ## Prerequisites
