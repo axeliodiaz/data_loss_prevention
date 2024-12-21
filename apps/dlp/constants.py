@@ -1,3 +1,5 @@
 EVENT_CALLBACK = "event_callback"
 EVENT_TYPE_MESSAGE = "message"
 EVENT_TYPE_FILE = "file_shared"
+SLACK_BLOCKING_MESSAGE = "Message was blocked due to containing sensitive information."
+SLACK_BLOCKING_FILE = "File was deleted for containing sensitive information."

@@ -5,11 +5,21 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.dlp.constants import EVENT_CALLBACK, EVENT_TYPE_MESSAGE
+from apps.dlp.constants import (
+    EVENT_CALLBACK,
+    EVENT_TYPE_MESSAGE,
+    SLACK_BLOCKING_MESSAGE,
+)
 from apps.dlp.models import Pattern
 from apps.dlp.serializers import DetectedMessageSerializer
 from apps.dlp.serializers import PatternSerializer
-from apps.dlp.services import scan_message, create_detected_messages, process_file
+from apps.dlp.services import (
+    scan_message,
+    create_detected_messages,
+    process_file,
+    replace_message,
+    delete_file_and_notify,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +35,14 @@ class SlackEventView(APIView, HttpResponseNotAllowed):
 
         if event_type and event_type == EVENT_CALLBACK:
             event = data.get("event", {})
-            message = event.get("text")
 
             if event.get("type") == EVENT_TYPE_MESSAGE:
+                message = event.get("text")
+
                 logger.info(f"Message received: {message}")
+                channel_id = event.get("channel", "")
+                ts = event.get("ts", "")
+
                 if "files" in event:
                     for file in event["files"]:
                         file_id = file["id"]
@@ -38,11 +52,25 @@ class SlackEventView(APIView, HttpResponseNotAllowed):
                             create_detected_messages(
                                 message=file_content, patterns=matches
                             )
+                            # Replace the message on Slack
+                            delete_file_and_notify(
+                                channel_id=channel_id,
+                                file_id=file_id,
+                            )
                 else:
+                    if message is None:
+                        logger.warning("Received an event with no message text.")
+                        return
                     matches = scan_message(message=message)
                     if matches:
                         # Create DetectedMessage objects in bulk
                         create_detected_messages(message=message, patterns=matches)
+                        # Replace the message on Slack
+                        replace_message(
+                            channel_id=channel_id,
+                            ts=ts,
+                            new_message=SLACK_BLOCKING_MESSAGE,
+                        )
             else:
                 logger.debug(f"Unhandled event type: {event.get('type')}")
         return data

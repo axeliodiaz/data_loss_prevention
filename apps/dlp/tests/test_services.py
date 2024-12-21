@@ -3,10 +3,13 @@ from unittest.mock import Mock
 import pytest
 from slack_sdk.errors import SlackApiError
 
+from apps.dlp.constants import SLACK_BLOCKING_FILE
 from apps.dlp.models import DetectedMessage
 from apps.dlp.services import (
     create_detected_messages,
     get_file_info,
+    delete_file_and_notify,
+    replace_message,
 )
 from apps.dlp.services import process_file, scan_message
 from data_loss_prevention.settings import SLACK_BOT_TOKEN
@@ -325,3 +328,103 @@ class TestGetFileInfo:
             slack_response["file"]["url_private_download"],
             headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
         )
+
+
+@pytest.mark.parametrize(
+    "response, expected_response",
+    [
+        ({"ok": True}, {"ok": True}),
+        (
+            {"ok": False, "error": "message_not_found"},
+            {"ok": False, "error": "message_not_found"},
+        ),
+    ],
+)
+def test_replace_message(mocker, response, expected_response):
+    """
+    Test replace_message functionality using mocker.
+    """
+    mock_chat_update = mocker.patch(
+        "apps.dlp.services.client.chat_update", return_value=response
+    )
+
+    result = replace_message("C123456", "1626181234.000200", "Updated message")
+
+    # Assertions
+    mock_chat_update.assert_called_once_with(
+        channel="C123456",
+        ts="1626181234.000200",
+        text="Updated message",
+    )
+    assert result == expected_response
+
+
+@pytest.mark.parametrize(
+    "delete_response, notify_response, expected_notify_call, expected_log_calls",
+    [
+        (
+            {"ok": True},
+            {"ok": True},
+            True,
+            [
+                ("info", "File file123 deleted successfully."),
+                ("info", "Notification message sent to channel C123456."),
+            ],
+        ),
+        (
+            {"ok": True},
+            {"ok": False, "error": "notification_failed"},
+            False,
+            [
+                ("info", "File file123 deleted successfully."),
+                ("error", "Failed to send notification: notification_failed"),
+            ],
+        ),
+        (
+            {"ok": False, "error": "file_not_found"},
+            None,
+            False,
+            [("error", "Failed to delete file: file_not_found")],
+        ),
+    ],
+)
+def test_delete_file_and_notify(
+    mocker,
+    delete_response,
+    notify_response,
+    expected_notify_call,
+    expected_log_calls,
+):
+    """
+    Test the delete_file_and_notify functionality.
+    """
+    # Mock Slack API calls
+    mock_files_delete = mocker.patch(
+        "apps.dlp.services.client.files_delete", return_value=delete_response
+    )
+    mock_chat_postMessage = mocker.patch(
+        "apps.dlp.services.client.chat_postMessage", return_value=notify_response
+    )
+    mock_logger = mocker.patch("apps.dlp.services.logger")
+
+    # Call the function
+    delete_file_and_notify(file_id="file123", channel_id="C123456")
+
+    # Assertions
+    mock_files_delete.assert_called_once_with(file="file123")
+
+    if delete_response["ok"]:
+        if expected_notify_call:
+            mock_chat_postMessage.assert_called_once_with(
+                channel="C123456", text=SLACK_BLOCKING_FILE
+            )
+        else:
+            mock_chat_postMessage.assert_called_once_with(
+                channel="C123456", text=SLACK_BLOCKING_FILE
+            )
+    else:
+        mock_chat_postMessage.assert_not_called()
+
+    # Verify logger calls
+    for log_method, log_message in expected_log_calls:
+        getattr(mock_logger, log_method).assert_any_call(log_message)
