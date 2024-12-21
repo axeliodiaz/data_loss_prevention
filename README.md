@@ -1,6 +1,6 @@
 # Data Loss Prevention Project
 
-This project implements a Data Loss Prevention (DLP) system to analyze messages and files for detecting sensitive patterns like emails, credit card numbers, and phone numbers.
+This project implements a Data Loss Prevention (DLP) system to analyze messages and files for detecting sensitive patterns like emails, credit card numbers, and phone numbers. The implementation is based on the assignment provided [here](https://gist.github.com/chesstrian/04e1da50b91411577073d81578443608).
 
 ## Project Structure
 
