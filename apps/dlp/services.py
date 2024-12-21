@@ -1,8 +1,11 @@
+import json
 import logging
 import re
 from typing import List
 
+import boto3
 import requests
+from django.conf import settings
 
 from apps.dlp.constants import SLACK_BLOCKING_FILE
 from apps.dlp.models import DetectedMessage, Pattern
@@ -181,3 +184,23 @@ def delete_file_and_notify(
             logger.error(f"Failed to delete file: {response['error']}")
     except SlackApiError as e:
         logger.error(f"Slack API Error: {e.response['error']}")
+
+
+def send_to_sqs(task_name, args=None, kwargs=None):
+    """Send a task to SQS."""
+    sqs = boto3.client(
+        "sqs",
+        endpoint_url=settings.AWS_SQS_ENDPOINT_URL,
+        region_name=settings.AWS_REGION_NAME,
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    )
+
+    queue_url = settings.AWS_SQS_QUEUE_URL
+    message = {
+        "task": task_name,
+        "args": args or [],
+        "kwargs": kwargs or {},
+    }
+
+    sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(message))

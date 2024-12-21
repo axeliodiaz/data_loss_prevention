@@ -199,15 +199,29 @@ The DLP system integrates with Slack to detect and block messages or files that 
      - The function `delete_file_and_notify` handles file deletion and posting the notification.
      - Requires the `files:write` permission for the user token.
 
-### Required Permissions
+## Slack Bot Configuration
 
-To enable these features, ensure that your bot or user token has the following permissions:
-- `chat:write`
-- `files:write`
-- `channels:history`
-- `groups:history`
-- `im:history`
-- `mpim:history`
+To ensure the Slack bot works correctly, follow these steps to configure the bot on your Slack workspace:
+
+1. **Bot Events**:
+   - In the Slack App configuration page, go to **Event Subscriptions**.
+   - Under **Subscribe to Bot Events**, add the following events:
+     - `message.channels` (to receive messages from public channels).
+     - `file_shared` (to detect shared files).
+
+2. **Scopes**:
+   - Navigate to **OAuth & Permissions** in your Slack App configuration.
+   - Confirm the following permissions are added under **Scopes**:
+     - `chat:write` (to send messages to channels).
+     - `files:read` (to read file information).
+     - `files:write` (to delete files and manage file sharing).
+     - `channels:history` (to read the history of messages and events in channels).
+
+3. **Bot Installation**:
+   - If you made changes to the scopes, reinstall the app by going to **Install App** in the Slack App configuration page.
+   - Make sure to copy and save the `Bot Token` and `User Token` for use in your application configuration.
+
+By completing these steps, your bot will be properly configured to handle messages and files within your Slack workspace.
 
 ### How It Works
 

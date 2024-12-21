@@ -1,41 +1,17 @@
-import json
-import logging
-
 import asyncio
-
 from manager import Manager
-from tasks import TASKS
+from tasks import process_message, process_file
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
+TASKS = {
+    "process_message": process_message,
+    "process_file": process_file,
+}
 
 
-class DummySQSQueue(Manager):
-    async def _get_messages(self):
-        """Simulate fetching messages from a queue."""
-        await asyncio.sleep(1)
-        return [
-            {
-                "Body": json.dumps(
-                    {"task": "process_file", "args": ("Sample content",), "kwargs": {}}
-                )
-            },
-            {
-                "Body": json.dumps(
-                    {
-                        "task": "process_message",
-                        "args": ("Hello, world!",),
-                        "kwargs": {},
-                    }
-                )
-            },
-        ]
+async def main():
+    manager = Manager(queue_name="dlp_tasks", tasks=TASKS)
+    await manager.main()
 
 
 if __name__ == "__main__":
-    queue_name = "dummy-queue"
-    manager = DummySQSQueue(queue_name=queue_name, tasks=TASKS)
-
-    asyncio.run(manager.main())
+    asyncio.run(main())
