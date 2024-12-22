@@ -68,8 +68,8 @@ This project implements a Data Loss Prevention (DLP) system to analyze messages 
 
 1. Clone the Repository
 ```bash
-git clone <repo_url>
-cd <repo_name>
+git@github.com:axeliodiaz/data_loss_prevention.git
+cd <data_loss_prevention>
 ```
 
 2. Set Up Environment Variables
