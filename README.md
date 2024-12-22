@@ -245,32 +245,6 @@ Update your environment variables to include:
 - `SLACK_BLOCKING_MESSAGE`: Default blocking message for messages with sensitive content.
 - `SLACK_BLOCKING_FILE`: Default blocking message for deleted files.
 
-### Usage
-
-#### Replace a Message
-The `replace_message` function can be used as follows:
-```python
-from apps.dlp.services import replace_message
-
-replace_message(
-    channel_id="C123456",
-    ts="1626181234.000200",
-    new_message="Message was blocked due to containing sensitive information.",
-)
-```
-
-#### Delete a File and Notify
-The `delete_file_and_notify function can be used as follows:
-```python
-from apps.dlp.services import delete_file_and_notify
-
-delete_file_and_notify(
-    file_id="file123",
-    channel_id="C123456",
-    message="A file containing sensitive information has been removed.",
-)
-```
-
 #### Slack demo video
 [Download Demo Video](docs/video.gif)
 
@@ -278,6 +252,4 @@ delete_file_and_notify(
 1.	Message Queue:
 ElasticMQ is used for local SQS emulation. Ensure it is running and accessible at http://elasticmq:9324.
 2. Slack Integration:
-Configure Slack events API and provide the bot token in .env.
-3.	Testing:
-Ensure all containers are running before executing tests.
+Configure Slack events API and provide the bot token in `.env`.
