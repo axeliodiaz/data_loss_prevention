@@ -210,9 +210,11 @@ By completing these steps, your bot will be properly configured to handle messag
 
 ### Configuration
 
-Update your environment variables to include:
+Update your environment variables to include in your `.env` and `docker-compose.yml` files:
 - `SLACK_BOT_TOKEN`: Token for the bot with appropriate permissions.
 - `SLACK_USER_TOKEN`: User token (required for file deletion).
+
+**Note**: For `docker-compose.yml` should be updated for `backend` and `dlpdistributed` containers.
 
 #### Slack demo video
 [Download Demo Video](docs/video.gif)

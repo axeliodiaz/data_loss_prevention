@@ -12,10 +12,6 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 import os
 
-"""
-curl -X GET "https://slack.com/api/files.info" -H "Authorization: Bearer xoxb-8212408868593-8185392676695-xhTjw14rRyiRnssUjaK1XOea" --data-urlencode "file=F086E94CURF"
-"""
-
 import pymysql
 import boto3
 from pathlib import Path
