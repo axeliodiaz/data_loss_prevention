@@ -3,6 +3,7 @@ services:
     image: mysql:8.0
     container_name: mysql-container
     environment:
+      MYSQL_ROOT_HOST: localhost
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: dlp_project
       MYSQL_USER: admin
@@ -11,38 +12,80 @@ services:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
+      - ./db-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "admin", "-ppassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   web:
     build:
       context: .
-    container_name: django_backend
+      dockerfile: Dockerfile
+    container_name: backend
     command: >
-      sh -c "python manage.py migrate &&
-             python manage.py createqueue &&
+      sh -c "python manage.py wait_for_db &&
+             python manage.py migrate &&
+             python manage.py loaddata apps/dlp/fixtures/* &&
+             python manage.py create_queue &&
              python manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/app
     ports:
       - "8000:8000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      sqs:
+        condition: service_healthy
+    environment:
+      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,backend
+      - DATABASE_HOST=mysql-container
+      - DATABASE_PORT=3306
+      - DATABASE_NAME=dlp_project
+      - DATABASE_USER=admin
+      - DATABASE_PASSWORD=password
+      - SLACK_BOT_TOKEN=xoxb-8212408868593-8185392676695-MMoBqoQ4H6NZVykbO5tUQqpo
+      - SLACK_USER_TOKEN=xoxp-8212408868593-8185188402199-8204911822373-2a13be60343b5a8a66580b8387b2dec1
+      - PYTHONPATH=/app:/app/dlp_distributed
 
-  dlp_distributed:
+  dlpdistributed:
     build:
       context: ./dlp_distributed
-    container_name: dlp_distributed
+      dockerfile: Dockerfile
+    container_name: dlpdistributed
     volumes:
       - ./dlp_distributed:/app
-    command: python main.py
+    command: sh -c "python wait_for_sqs.py && python main.py"
     depends_on:
-      - web
-      - elasticmq
+      web:
+        condition: service_started
+      sqs:
+        condition: service_healthy
+    environment:
+      - BASE_URL=http://backend:8000
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION_NAME=us-east-1
+      - AWS_SQS_ENDPOINT_URL=http://sqs:9324
+      - AWS_SQS_QUEUE_URL=http://sqs:9324/000000000000/dlp-tasks
+      - AWS_SQS_QUEUE_NAME=dlp-tasks
+      - SLACK_BOT_TOKEN=xoxb-8212408868593-8185392676695-MMoBqoQ4H6NZVykbO5tUQqpo
+      - SLACK_USER_TOKEN=xoxp-8212408868593-8185188402199-8204911822373-2a13be60343b5a8a66580b8387b2dec1
+      - PYTHONPATH=/app
 
-  elasticmq:
+  sqs:
     image: softwaremill/elasticmq
-    container_name: elasticmq
+    container_name: sqs
     ports:
       - "9324:9324"
+      - "9325:9325"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "-X", "POST", "-d", "Action=ListQueues", "http://localhost:9324/" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 volumes:
   db_data:
