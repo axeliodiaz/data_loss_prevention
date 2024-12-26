@@ -46,8 +46,8 @@ services:
       - DATABASE_NAME=dlp_project
       - DATABASE_USER=admin
       - DATABASE_PASSWORD=password
-      - SLACK_BOT_TOKEN=xoxb-8212408868593-8185392676695-MMoBqoQ4H6NZVykbO5tUQqpo
-      - SLACK_USER_TOKEN=xoxp-8212408868593-8185188402199-8204911822373-2a13be60343b5a8a66580b8387b2dec1
+      - SLACK_BOT_TOKEN=<your_slack_bot_token>
+      - SLACK_USER_TOKEN=<your_slack_user_token>
       - PYTHONPATH=/app:/app/dlp_distributed
 
   dlpdistributed:
@@ -71,8 +71,8 @@ services:
       - AWS_SQS_ENDPOINT_URL=http://sqs:9324
       - AWS_SQS_QUEUE_URL=http://sqs:9324/000000000000/dlp-tasks
       - AWS_SQS_QUEUE_NAME=dlp-tasks
-      - SLACK_BOT_TOKEN=xoxb-8212408868593-8185392676695-MMoBqoQ4H6NZVykbO5tUQqpo
-      - SLACK_USER_TOKEN=xoxp-8212408868593-8185188402199-8204911822373-2a13be60343b5a8a66580b8387b2dec1
+      - SLACK_BOT_TOKEN=<your_slack_bot_token>
+      - SLACK_USER_TOKEN=<your_slack_user_token>
       - PYTHONPATH=/app
 
   sqs:
