@@ -21,4 +21,4 @@ def create_queue(queue_name):
 
 
 if __name__ == "__main__":
-    create_queue("dlp_tasks")
+    create_queue(settings.AWS_SQS_QUEUE_NAME)

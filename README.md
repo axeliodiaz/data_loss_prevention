@@ -83,7 +83,7 @@ DB_HOST=db
 DB_PORT=3306
 SLACK_BOT_TOKEN=<your_slack_bot_token>
 SLACK_USER_TOKEN=<your_slack_user_token>
-AWS_SQS_ENDPOINT_URL=http://elasticmq:9324
+AWS_SQS_ENDPOINT_URL=http://sqs:9324
 AWS_REGION_NAME=us-east-1
 AWS_ACCESS_KEY_ID=dummy
 AWS_SECRET_ACCESS_KEY=dummy
@@ -92,7 +92,7 @@ BASE_URL=http://127.0.0.1:8000
 
 ## Running the Project
 
-1. Build and Run the Services
+### 1. Build and Run the Services
 
 Use Docker Compose to build and start the services:
 
@@ -104,72 +104,43 @@ This will:
 - Start the MySQL database.
 - Start the Django backend.
 - Start the ElasticMQ service for local SQS emulation.
+- Load an initial patterns data (from `apps/dlp/fixtures/`)
 
-2. Access the Application
+### 2. Access the Application
 
 - Django Admin: `http://127.0.0.1:8000/admin`
 - API Base URL: `http://127.0.0.1:8000/api/`
 
-3. Create SQS Queue
-Run the script create_queue.py to create the required queue (dlp_tasks):
-```bash
-docker exec -it django_backend python create_queue.py
-```
-This script will connect to ElasticMQ (or AWS SQS in production) and create the queue.
-
 ## Post-Setup
 
-1. Apply Database Migrations
-
-Run the following command to apply migrations:
-```bash
-docker exec -it django_backend python manage.py migrate
-```
-
-2. Create a Superuser
+### Create a Superuser
 
 Create a superuser for the admin panel:
 ```bash
-docker exec -it django_backend python manage.py createsuperuser
-```
-
-3. Populate Patterns
-
-Load initial patterns into the database:
-### Load Initial Patterns
-
-```bash
-docker exec -it django_backend python manage.py loaddata apps/dlp/fixtures/initial_patterns.json
+docker exec -it backend python manage.py createsuperuser
 ```
 
 ## Testing
 
 1. Run Backend Tests
 
-Run the backend tests inside the Django container:
+Run the backend tests:
 ```bash
-docker exec -it django_backend pytest 
+docker exec -it backend pytest -W ignore 
+```
+
+Run the dlpdistributed tests:
+```bash
+docker exec -it dlpdistributed pytest -W ignore
 ```
 
 This will include `dlp` tests and `dlp_distributed` tests.
 
 ## Important Routes
 ```
-/api/detected-messages/	apps.dlp.views.DetectedMessageCreateAPIView	dlp:detected-message-create
-/api/patterns/	apps.dlp.views.PatternListAPIView	dlp:pattern-list
-/api/slack/events/	apps.dlp.views.SlackEventView	dlp:slack_event
-```
-
-## Dockerfile Overview
-The Dockerfile is used to build the entire project:
-```dockerfile
-FROM python:3.10-slim
-WORKDIR /app
-COPY requirements/base.txt requirements/local.txt ./requirements/
-RUN pip install --no-cache-dir -r requirements/local.txt
-COPY . /app
-EXPOSE 8000
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+/api/detected-messages/ apps.dlp.views.DetectedMessageCreateAPIView     dlp:detected-message-create
+/api/patterns/  apps.dlp.views.PatternListAPIView       dlp:pattern-list
+/api/slack/events/      apps.dlp.views.SlackEventView   dlp:slack_event
 ```
 
 ## Slack Integration Features
@@ -242,14 +213,12 @@ By completing these steps, your bot will be properly configured to handle messag
 Update your environment variables to include:
 - `SLACK_BOT_TOKEN`: Token for the bot with appropriate permissions.
 - `SLACK_USER_TOKEN`: User token (required for file deletion).
-- `SLACK_BLOCKING_MESSAGE`: Default blocking message for messages with sensitive content.
-- `SLACK_BLOCKING_FILE`: Default blocking message for deleted files.
 
 #### Slack demo video
 [Download Demo Video](docs/video.gif)
 
 ##	Notes
 1.	Message Queue:
-ElasticMQ is used for local SQS emulation. Ensure it is running and accessible at http://elasticmq:9324.
+ElasticMQ is used for local SQS emulation. Ensure it is running and accessible at http://sqs:9324.
 2. Slack Integration:
 Configure Slack events API and provide the bot token in `.env`.

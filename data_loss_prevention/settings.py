@@ -36,12 +36,7 @@ SECRET_KEY = "django-insecure-%qu8x3%kiituxfv6#10l(a)*f+5g07w5#&@83vxv4juc^qyt!#
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
-ALLOWED_HOSTS = [
-    "7e19-190-21-53-115.ngrok-free.app",
-    "localhost",
-    "127.0.0.1",
-]
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -102,7 +97,7 @@ DATABASES = {
         "NAME": "dlp_project",
         "USER": "admin",
         "PASSWORD": "password",
-        "HOST": "localhost",
+        "HOST": "mysql-container",
         "PORT": "3306",
         "OPTIONS": {
             "sql_mode": "STRICT_TRANS_TABLES",
@@ -112,11 +107,14 @@ DATABASES = {
 
 
 # Amazon Web Service
-AWS_SQS_ENDPOINT_URL = "http://elasticmq:9324"
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+AWS_SQS_ENDPOINT_URL = os.getenv("AWS_SQS_ENDPOINT_URL", "http://sqs:9324")
 AWS_REGION_NAME = os.getenv("AWS_REGION_NAME", "us-east-1")
-AWS_SQS_QUEUE_URL = os.getenv("AWS_SQS_QUEUE_URL", "")
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "test")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "test")
+AWS_SQS_QUEUE_URL = os.getenv(
+    "AWS_SQS_QUEUE_URL", "http://elasticmq:9324/000000000000/dlp-tasks"
+)
+AWS_SQS_QUEUE_NAME = os.getenv("AWS_SQS_QUEUE_NAME", "dlp-tasks")
 
 # SQS configuration
 sqs = boto3.client(

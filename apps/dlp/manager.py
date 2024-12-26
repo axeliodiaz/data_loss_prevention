@@ -11,10 +11,10 @@ class Manager:
 
         self.sqs = boto3.client(
             "sqs",
-            endpoint_url="http://localhost:9324",
+            endpoint_url="http://sqs:9324",
             region_name="us-east-1",
-            aws_access_key_id="fake_access_key",
-            aws_secret_access_key="fake_secret_key",
+            aws_access_key_id="test",
+            aws_secret_access_key="test",
         )
 
     async def _get_messages(self):

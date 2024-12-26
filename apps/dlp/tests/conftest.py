@@ -68,15 +68,17 @@ def mock_requests_get(mocker):
 
 
 @pytest.fixture
-def mock_scan_file(mocker):
-    """
-    Fixture to mock the `scan_file` function.
-    """
-    return mocker.patch("apps.dlp.services.scan_file")
-
-
-@pytest.fixture
 def detected_message(pattern_email):
     return DetectedMessage.objects.create(
         content="This is a test message", pattern=pattern_email
     )
+
+
+@pytest.fixture
+def api_client():
+    return APIClient()
+
+
+@pytest.fixture
+def pattern():
+    return Pattern.objects.create(name="Test Pattern", regex=r"\d+")
